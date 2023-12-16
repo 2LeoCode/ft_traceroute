@@ -4,29 +4,29 @@
 #include <limits.h>
 #include <errno.h>
 
-static long add_range_check(long a, long b) {
-  if (a > 0 && b > LONG_MAX - a) {
-    errno = ERANGE;
-    return LONG_MAX;
-  }
-  if (a < 0 && b < LONG_MIN - a) {
-    errno = ERANGE;
-    return LONG_MIN;
-  }
-  return a + b;
-}
+#define AddRangeCheck(a, b, RANGE) ({ \
+  if (a > 0 && b > RANGE ## _MAX - a) { \
+    errno = ERANGE; \
+    return RANGE ## _MAX; \
+  } \
+  if (a < 0 && b < RANGE ## _MIN - a) { \
+    errno = ERANGE; \
+    return RANGE ## _MIN; \
+  } \
+  a + b; \
+})
 
-static long mul_range_check(long a, long b) {
-  if (a > 0 && b > LONG_MAX / a) {
-    errno = ERANGE;
-    return LONG_MAX;
-  }
-  if (a < 0 && b < LONG_MIN / a) {
-    errno = ERANGE;
-    return LONG_MIN;
-  }
-  return a * b;
-}
+#define MulRangeCheck(a, b, RANGE) ({ \
+  if (a > 0 && b > RANGE ## _MAX / a) { \
+    errno = ERANGE; \
+    return RANGE ## _MAX; \
+  } \
+  if (a < 0 && b < RANGE ## _MIN / a) { \
+    errno = ERANGE; \
+    return RANGE ## _MIN; \
+  } \
+  a * b; \
+})
 
 long
 ft_strtol(const char * nptr, char ** endptr, int base) {
@@ -61,8 +61,8 @@ ft_strtol(const char * nptr, char ** endptr, int base) {
       break;
     if (digit >= base)
       break;
-    result = mul_range_check(result, base);
-    result = add_range_check(result, sign * digit);
+    result = AddRangeCheck(result, base, LONG);
+    result = MulRangeCheck(result, sign * digit, LONG);
   }
   if (endptr)
     *endptr = (char *)nptr;

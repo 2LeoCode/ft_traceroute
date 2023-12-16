@@ -1,0 +1,7 @@
+services:
+  ft_traceroute:
+    build: .
+    working_dir: /root/ft_traceroute
+    volumes:
+      - "./:/root/ft_traceroute"
+    command: bash -c "sleep infinity"

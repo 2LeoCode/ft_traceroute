@@ -1,11 +1,30 @@
 #include <misc.h>
 #include <stdio.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 # define TR_SUCCESS 0
 # define TR_FAILURE 2
 
-enum tr_options {
+typedef struct tr_data tr_data;
+typedef struct tr_options tr_options;
+
+enum tr_global_options {
   TR_HELP = 1,
+};
+
+enum tr_module_options {
+  TR_MODULE_DEFAULT = 0,
+};
+
+struct tr_data {
+  int socket;
+};
+
+struct tr_options {
+  int global_options;
+  int module_options;
+  size_t packetlen;
 };
 
 int tr_bad_option(int index, const char * option) {
@@ -23,7 +42,7 @@ int tr_parse_options(int * argc, const char ** argv) {
 
     if (argv[i][1] == '-') {
       // long option
-      
+
       if (!ft_strcmp(argv[i] + 2, "help"))
         options |= TR_HELP;
       else {
@@ -61,6 +80,12 @@ int tr_help(void) {
 int tr_missing_arg(const char * arg) {
   fprintf(stderr, "Specify \"%s\" missing argument.", arg);
   return TR_FAILURE;
+}
+
+tr_data tr_init(tr_options * options) {
+  tr_data data;
+
+  data.socket = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
 }
 
 int tr_main(int argc, const char * const * argv) {

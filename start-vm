@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker-compose up --build -d && docker-compose exec ft_traceroute bash && docker-compose down -v
