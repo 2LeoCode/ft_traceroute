@@ -2,6 +2,7 @@
 #define TRACEROUTE_H
 
 #include <netinet/in.h>
+#include <netinet/ip.h>
 #include <time.h>
 
 #define TR_SUCCESS 0
@@ -9,16 +10,18 @@
 
 #define TR_MAX_TTL_MAX 0xff
 #define TR_FIRST_TTL_MAX 0xff
+#define TR_WAIT_MAX_DEFAULT 5.
+#define TR_WAIT_HERE_DEFAULT 3.
+#define TR_WAIT_NEAR_DEFAULT 10.
 #define TR_NQUERIES_MAX 0x40
 #define TR_PACKET_LEN_MAX 0xffff
 
-#define TR_PACKET_LEN_DEFAULT 40
+#define TR_PACKET_LEN_DEFAULT (40 + sizeof(struct iphdr))
 #define TR_FIRST_TTL_DEFAULT 1
 #define TR_MAX_TTL_DEFAULT 30
 #define TR_NQUERIES_DEFAULT 3
 
 #define TR_UDP_UNLIKELY_PORT 33434
-#define TR_TIMEOUT_MS 5000
 
 typedef struct s_tr_socket TR_Socket;
 typedef struct s_tr_options TR_Options;
@@ -56,6 +59,9 @@ struct s_tr_options {
   uint8_t nQueries;
   const char * dstHost;
   in_addr_t dstAddress;
+  struct {
+    double max, here, near;
+  } wait;
 };
 
 TR_Options TR_parseArgs(int argc, const char * const * argv);

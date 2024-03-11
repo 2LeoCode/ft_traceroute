@@ -78,7 +78,11 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
       .firstTtl = TR_FIRST_TTL_DEFAULT,
       .maxTtl = TR_MAX_TTL_DEFAULT,
       .nQueries = TR_NQUERIES_DEFAULT,
-  };
+      .wait = {
+          .max = TR_WAIT_MAX_DEFAULT,
+          .here = TR_WAIT_HERE_DEFAULT,
+          .near = TR_WAIT_NEAR_DEFAULT,
+      }};
 
   for (int i = 1; i < argc; ++i) {
     if (*argv[i] != '-' || !argv[i][1]) {
@@ -121,23 +125,43 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
       if (!strncmp(argv[i] + 2, "first", 5)) {
         char * endptr;
         errno = 0;
-        if (argv[i][7] != '=')
+        if (argv[i][7] != '=' || !argv[i][8])
           TR_missingOptionArg("--first", i, "--first=first_ttl");
         const unsigned long firstTtl = strtoul(argv[i] + 8, &endptr, 0);
-        if (!argv[i][8] || errno == ERANGE || *endptr ||
-            firstTtl > TR_FIRST_TTL_MAX)
-          TR_invalidOptionArg("--first", argv[i], i);
+        if (errno == ERANGE || *endptr || firstTtl > TR_FIRST_TTL_MAX)
+          TR_invalidOptionArg("--first", argv[i] + 8, i);
         options.firstTtl = firstTtl;
       } else if (!strncmp(argv[i] + 2, "max-hops", 8)) {
         char * endptr;
         errno = 0;
-        if (argv[i][10] != '=')
-          TR_missingOptionArg("--max", i, "--max=max_ttl");
+        if (argv[i][10] != '=' || !argv[i][11])
+          TR_missingOptionArg("--max-hops", i, "--max-hops=max_ttl");
         const unsigned long maxTtl = strtoul(argv[i] + 11, &endptr, 0);
-        if (!argv[i][6] || errno == ERANGE || *endptr ||
-            maxTtl > TR_MAX_TTL_MAX)
-          TR_invalidOptionArg("--max", argv[i], i);
+        if (errno == ERANGE || *endptr || maxTtl > TR_MAX_TTL_MAX)
+          TR_invalidOptionArg("--max-hops", argv[i] + 11, i);
         options.maxTtl = maxTtl;
+      } else if (!strncmp(argv[i] + 2, "wait", 4)) {
+        char * endptr;
+        errno = 0;
+        if (argv[i][6] != '=')
+          TR_missingOptionArg("--wait", i, "--wait=wait_time");
+        options.wait.max = strtod(argv[i] + 7, &endptr);
+        if (!argv[i][6] || errno == ERANGE)
+          TR_invalidOptionArg("--wait", argv[i] + 7, i);
+        if (!*endptr) {
+          options.wait.here = options.wait.near = 0;
+          continue;
+        }
+        if (*endptr != ',' || !endptr[1])
+          TR_invalidOptionArg("--wait", argv[i] + 7, i);
+        options.wait.here = strtod(endptr + 1, &endptr);
+        if (!*endptr)
+          continue;
+        if (*endptr != ',' || !endptr[1])
+          TR_invalidOptionArg("--wait", argv[i] + 7, i);
+        options.wait.near = strtod(endptr + 1, &endptr);
+        if (*endptr)
+          TR_invalidOptionArg("--wait", argv[i] + 7, i);
       } else
         // unknown option
         TR_badOption(argv[i], i);

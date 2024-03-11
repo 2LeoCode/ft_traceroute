@@ -23,12 +23,12 @@ void TR_chronoStop(TR_Chrono * chrono) {
 
 double TR_chronoElapsedMs(const TR_Chrono * chrono) {
   if (chrono->status == TR_CHRONO_SUCCESS) {
-    return chrono->time.tv_sec * 1000 + chrono->time.tv_nsec / 1000000;
+    return chrono->time.tv_sec * 1000. + chrono->time.tv_nsec / 1000000.;
   }
 
   struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
 
-  return (now.tv_sec - chrono->time.tv_sec) * 1000 +
-         (now.tv_nsec - chrono->time.tv_nsec) / 1000000;
+  return (now.tv_sec - chrono->time.tv_sec) * 1000. +
+         (now.tv_nsec - chrono->time.tv_nsec) / 1000000.;
 }

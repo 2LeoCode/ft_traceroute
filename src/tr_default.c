@@ -3,6 +3,7 @@
 #include <netdb.h>
 #include <netinet/ip_icmp.h>
 #include <setjmp.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,12 +27,12 @@ static void TR_fillPacket(void * pkt, size_t n) {
     ((uint8_t *)pkt)[i] = 'a' + (i % 26);
 }
 
-int TR_default(const TR_Options * param) {
+int TR_default(const TR_Options * options) {
   jmp_buf env;
   TR_Socket sockets[TR_MAX_TTL_MAX]
       __attribute__((cleanup(TR_socketsCleanup))) = {0};
 
-  uint8_t lastHop = param->maxTtl - param->firstTtl;
+  uint8_t lastHop = options->maxTtl - options->firstTtl;
   uint8_t nfds = lastHop + 1;
   fd_set fds;
   char * pkt;
@@ -41,13 +42,13 @@ int TR_default(const TR_Options * param) {
     free(pkt);
     return TR_FAILURE;
   }
-  if (!(pkt = malloc(param->packetLen)))
+  if (!(pkt = malloc(options->packetLen - sizeof(struct iphdr))))
     longjmp(env, TR_FAILURE);
 
-  TR_fillPacket(pkt, param->packetLen);
+  TR_fillPacket(pkt, options->packetLen - sizeof(struct iphdr));
   FD_ZERO(&fds);
 
-  for (uint8_t i = 0; i < param->maxTtl; ++i) {
+  for (uint8_t i = 0; i < options->maxTtl; ++i) {
     sockets[i] = (TR_Socket){
         .fileno = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP),
     };
@@ -58,7 +59,7 @@ int TR_default(const TR_Options * param) {
             sockets[i].fileno,
             SOL_IP,
             IP_TTL,
-            (int[]){i + param->firstTtl},
+            (int[]){i + options->firstTtl},
             sizeof(int)
         ) ||
         setsockopt(
@@ -72,26 +73,24 @@ int TR_default(const TR_Options * param) {
         .sin_family = AF_INET,
         .sin_addr =
             {
-                .s_addr = param->dstAddress,
+                .s_addr = options->dstAddress,
             },
     };
   }
 
-  for (uint8_t i = 0; i < param->nQueries; ++i) {
-    const uint16_t port = htons(TR_UDP_UNLIKELY_PORT + i);
-
-    for (uint8_t j = 0; j <= lastHop; ++j) {
-      sockets[j].dstAddress.sin_port = port;
+  for (uint8_t i = 0; i <= lastHop; ++i) {
+    for (uint8_t j = 0; j < options->nQueries; ++j) {
+      sockets[i].dstAddress.sin_port = htons(TR_UDP_UNLIKELY_PORT + j);
       if (sendto(
-              sockets[j].fileno,
+              sockets[i].fileno,
               pkt,
-              param->packetLen,
+              options->packetLen - sizeof(struct iphdr),
               0,
-              (void *)&sockets[j].dstAddress,
+              (void *)&sockets[i].dstAddress,
               sizeof(struct sockaddr_in)
           ) == -1)
         longjmp(env, TR_FAILURE);
-      TR_chronoStart(sockets[j].chronos + i);
+      TR_chronoStart(sockets[i].chronos + j);
     }
   }
 
@@ -188,15 +187,39 @@ int TR_default(const TR_Options * param) {
     }
 
     for (uint8_t i = 0; i <= lastHop; ++i) {
-      for (uint8_t j = 0; j < param->nQueries; ++j) {
+      for (uint8_t j = 0; j < options->nQueries; ++j) {
         if (!sockets[i].chronos[j].status) {
-          if (TR_chronoElapsedMs(sockets[i].chronos + j) > TR_TIMEOUT_MS) {
+          double timeoutMs = options->wait.max * 1000;
+          bool foundHere = false;
+
+          if (options->wait.here) {
+            for (uint8_t k = 0; k < options->nQueries; ++k) {
+              if (sockets[i].chronos[k].status == TR_CHRONO_SUCCESS) {
+                timeoutMs = TR_chronoElapsedMs(sockets[i].chronos + k) *
+                            options->wait.here;
+                foundHere = true;
+                break;
+              }
+            }
+          }
+          if (!foundHere && options->wait.near) {
+            for (uint8_t k = i + 1; k <= lastHop; ++k) {
+              for (uint8_t l = 0; l < options->nQueries; ++l) {
+                if (sockets[k].chronos[l].status == TR_CHRONO_SUCCESS) {
+                  timeoutMs = TR_chronoElapsedMs(sockets[k].chronos + l) *
+                              options->wait.near;
+                  break;
+                }
+              }
+            }
+          }
+          if (TR_chronoElapsedMs(sockets[i].chronos + j) > timeoutMs) {
             sockets[i].chronos[j].status = TR_CHRONO_TIMEOUT;
             ++sockets[i].packetsReceivedOrLost;
           }
         }
       }
-      if (sockets[i].packetsReceivedOrLost == param->nQueries &&
+      if (sockets[i].packetsReceivedOrLost == options->nQueries &&
           FD_ISSET(sockets[i].fileno, &fds)) {
         FD_CLR(sockets[i].fileno, &fds);
         close(sockets[i].fileno);
@@ -210,24 +233,23 @@ int TR_default(const TR_Options * param) {
   char dstIp[INET_ADDRSTRLEN + 1] = {};
   inet_ntop(
       AF_INET,
-      (struct in_addr[]){{.s_addr = param->dstAddress}},
+      (struct in_addr[]){{.s_addr = options->dstAddress}},
       dstIp,
       INET_ADDRSTRLEN
   );
   printf(
       "traceroute to %s (%s), %d hops max, %d byte packets\n",
-      param->dstHost,
+      options->dstHost,
       dstIp,
-      param->maxTtl,
-      param->packetLen
+      options->maxTtl,
+      options->packetLen
   );
 
   char ip[INET_ADDRSTRLEN + 1];
   char name[NI_MAXHOST + 1];
   for (uint8_t i = 0; i <= lastHop; ++i) {
-
-    printf("%2d", i + param->firstTtl);
-    for (uint8_t j = 0; j < 3; ++j) {
+    printf("%2d", i + options->firstTtl);
+    for (uint8_t j = 0; j < options->nQueries; ++j) {
       if (sockets[i].chronos[j].status == TR_CHRONO_TIMEOUT)
         printf(" *");
       else if (j && (sockets[i].chronos[j - 1].status == TR_CHRONO_SUCCESS) &&
@@ -251,7 +273,7 @@ int TR_default(const TR_Options * param) {
             0
         );
         printf(
-            " %s (%s) %.5lf ms",
+            " %s (%s) %.3lf ms",
             name,
             ip,
             TR_chronoElapsedMs(sockets[i].chronos + j)
