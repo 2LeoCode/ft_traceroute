@@ -1,8 +1,3 @@
-#include <errno.h>
-#include <netdb.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <traceroute.h>
 
 static void TR_badOption(const char * option, int idx) {
