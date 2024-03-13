@@ -1,13 +1,17 @@
 #include <traceroute.h>
 
-int TR_initSockets(TR_SocketSet * tr, const TR_Options * options) {
+int TR_initSockets(
+    TR_SocketSet * tr, const TR_Options * options, const TR_Driver * driver
+) {
   tr->lastHop = options->maxTtl - options->firstTtl;
   tr->nfds = tr->lastHop + 1;
   FD_ZERO(&tr->fds);
 
   for (uint8_t i = 0; i < tr->nfds; ++i) {
     tr->sockets[i] = (TR_Socket){
-        .fileno = socket(tr->domain, tr->type, tr->protocol),
+        .fileno = socket(
+            driver->domain, driver->type | SOCK_NONBLOCK, driver->protocol
+        ),
     };
     if (tr->sockets[i].fileno == -1)
       return TR_FAILURE;

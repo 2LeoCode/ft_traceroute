@@ -1,15 +1,13 @@
 #include <traceroute.h>
 
-int TR_default(const TR_Options * options) {
+int TR_run(const TR_Options * options, const TR_Driver * driver) {
   TR_SocketSet tr = {
       .nfds = options->maxTtl - options->firstTtl + 1,
-      .domain = AF_INET,
-      .type = SOCK_DGRAM | SOCK_NONBLOCK,
-      .protocol = IPPROTO_UDP,
   };
 
-  if (TR_initSockets(&tr, options) || TR_processRequests(&tr, options) ||
-      TR_processResponses(&tr, options))
+  if (TR_initSockets(&tr, options, driver) ||
+      TR_processRequests(&tr, options, driver) ||
+      TR_processResponses(&tr, options, driver))
     goto Error;
 
   TR_log(tr.sockets, options, tr.lastHop + 1);

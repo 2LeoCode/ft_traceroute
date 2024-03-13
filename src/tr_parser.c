@@ -69,6 +69,7 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
   size_t arg_cnt = 0;
   TR_Options options = {
       .global_opts = argc == 1 ? TR_HELP : 0,
+      .method = TR_UDP,
       .packetLen = TR_PACKET_LEN_DEFAULT,
       .firstTtl = TR_FIRST_TTL_DEFAULT,
       .maxTtl = TR_MAX_TTL_DEFAULT,
@@ -78,6 +79,9 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
           .here = TR_WAIT_HERE_DEFAULT,
           .near = TR_WAIT_NEAR_DEFAULT,
       }};
+
+  char * endptr;
+  errno = 0;
 
   for (int i = 1; i < argc; ++i) {
     if (*argv[i] != '-' || !argv[i][1]) {
@@ -94,8 +98,6 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
         case 1:
           // packetlen
 
-          char * endptr;
-          errno = 0;
           const unsigned long packetLen = strtoul(argv[i], &endptr, 0);
           if (errno == ERANGE || *endptr || packetLen > TR_PACKET_LEN_MAX)
             TR_invalidArg("packetlen", argv[i], arg_cnt, i);
@@ -118,8 +120,6 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
         return options;
       }
       if (!strncmp(argv[i] + 2, "first", 5)) {
-        char * endptr;
-        errno = 0;
         if (argv[i][7] != '=' || !argv[i][8])
           TR_missingOptionArg("--first", i, "--first=first_ttl");
         const unsigned long firstTtl = strtoul(argv[i] + 8, &endptr, 0);
@@ -127,8 +127,6 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
           TR_invalidOptionArg("--first", argv[i] + 8, i);
         options.firstTtl = firstTtl;
       } else if (!strncmp(argv[i] + 2, "max-hops", 8)) {
-        char * endptr;
-        errno = 0;
         if (argv[i][10] != '=' || !argv[i][11])
           TR_missingOptionArg("--max-hops", i, "--max-hops=max_ttl");
         const unsigned long maxTtl = strtoul(argv[i] + 11, &endptr, 0);
@@ -136,8 +134,6 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
           TR_invalidOptionArg("--max-hops", argv[i] + 11, i);
         options.maxTtl = maxTtl;
       } else if (!strncmp(argv[i] + 2, "wait", 4)) {
-        char * endptr;
-        errno = 0;
         if (argv[i][6] != '=')
           TR_missingOptionArg("--wait", i, "--wait=wait_time");
         options.wait.max = strtod(argv[i] + 7, &endptr);
@@ -150,10 +146,10 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
         if (*endptr != ',' || !endptr[1])
           TR_invalidOptionArg("--wait", argv[i] + 7, i);
         options.wait.here = strtod(endptr + 1, &endptr);
+        if (errno == ERANGE || (*endptr && (*endptr != ',' || !endptr[1])))
+          TR_invalidOptionArg("--wait", argv[i] + 7, i);
         if (!*endptr)
           continue;
-        if (*endptr != ',' || !endptr[1])
-          TR_invalidOptionArg("--wait", argv[i] + 7, i);
         options.wait.near = strtod(endptr + 1, &endptr);
         if (*endptr)
           TR_invalidOptionArg("--wait", argv[i] + 7, i);
@@ -165,8 +161,6 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
       // short option(s)
 
       for (const char * c = argv[i] + 1; *c; ++c) {
-        char * endptr;
-        errno = 0;
 
         switch (*c) {
           case 'f':
@@ -199,6 +193,27 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
             options.nQueries = nQueries;
             break;
 
+          case 'w':
+            if (i + 1 == argc)
+              TR_missingOptionArg("-w", i, "-w wait_time");
+            options.wait.max = strtod(argv[++i], &endptr);
+            if (!*argv[i] || errno == ERANGE)
+              TR_invalidOptionArg("-w", argv[i], i);
+            if (!*endptr) {
+              options.wait.here = options.wait.near = 0;
+              continue;
+            }
+            if (*endptr != ',' || !endptr[1])
+              TR_invalidOptionArg("-w", argv[i], i);
+            options.wait.here = strtod(endptr + 1, &endptr);
+            if (errno == ERANGE || (*endptr && (*endptr != ',' || !endptr[1])))
+              TR_invalidOptionArg("-w", argv[i], i);
+            if (!*endptr)
+              continue;
+            options.wait.near = strtod(endptr + 1, &endptr);
+            if (errno == ERANGE || *endptr)
+              TR_invalidOptionArg("-w", argv[i], i);
+            break;
           default:
             // unknown option
 

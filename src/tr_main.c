@@ -6,5 +6,14 @@ int main(int argc, const char * const * argv) {
   if (options.global_opts & TR_HELP)
     return TR_help();
 
-  return TR_default(&options);
+  TR_Driver driver;
+
+  switch (options.method) {
+    case TR_UDP:
+    default:
+      driver = TR_udpDriver();
+      break;
+  }
+
+  return TR_run(&options, &driver);
 }

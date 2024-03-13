@@ -40,8 +40,15 @@ typedef struct s_tr_socket TR_Socket;
 typedef struct s_tr_socket_set TR_SocketSet;
 typedef struct s_tr_options TR_Options;
 typedef struct s_tr_chrono TR_Chrono;
+typedef struct s_tr_driver TR_Driver;
+typedef struct s_tr_packet TR_Packet;
 typedef enum e_tr_chrono_status TR_ChronoStatus;
 typedef enum e_tr_global_options TR_GlobalOptions;
+typedef enum e_tr_method TR_Method;
+
+typedef TR_Packet * TR_BuildPacketFn(size_t size);
+typedef int TR_SendFn(const TR_Socket * socket, TR_Packet * packet);
+typedef int TR_RecvFn(TR_Socket * socket, bool * dstReached);
 
 enum e_tr_chrono_status {
   TR_CHRONO_SUCCESS = 0b01,
@@ -50,6 +57,10 @@ enum e_tr_chrono_status {
 
 enum e_tr_global_options {
   TR_HELP = 0b1,
+};
+
+enum e_tr_method {
+  TR_UDP = 0,
 };
 
 struct s_tr_chrono {
@@ -70,13 +81,11 @@ struct s_tr_socket_set {
   fd_set fds;
   uint8_t nfds;
   uint8_t lastHop;
-  int domain;
-  int type;
-  int protocol;
 };
 
 struct s_tr_options {
   TR_GlobalOptions global_opts;
+  TR_Method method;
   uint8_t packetLen;
   uint8_t firstTtl;
   uint8_t maxTtl;
@@ -88,18 +97,40 @@ struct s_tr_options {
   } wait;
 };
 
+struct s_tr_driver {
+  int domain;
+  int type;
+  int protocol;
+  TR_BuildPacketFn * buildPacket;
+  TR_SendFn * send;
+  TR_RecvFn * recv;
+};
+
+struct s_tr_packet {
+  size_t size;
+  uint8_t data[];
+};
+
 TR_Options TR_parseArgs(int argc, const char * const * argv);
 int TR_help(void);
-int TR_default(const TR_Options * param);
+int TR_run(const TR_Options * options, const TR_Driver * driver);
 
-int TR_initSockets(TR_SocketSet * tr, const TR_Options * options);
+int TR_initSockets(
+    TR_SocketSet * tr, const TR_Options * options, const TR_Driver * driver
+);
 void TR_cleanupSockets(TR_SocketSet * tr);
-int TR_processRequests(TR_SocketSet * tr, const TR_Options * options);
-int TR_processResponses(TR_SocketSet * tr, const TR_Options * options);
+int TR_processRequests(
+    TR_SocketSet * tr, const TR_Options * options, const TR_Driver * driver
+);
+int TR_processResponses(
+    TR_SocketSet * tr, const TR_Options * options, const TR_Driver * driver
+);
 void TR_log(const TR_Socket * sockets, const TR_Options * options, size_t hops);
 
 void TR_chronoStart(TR_Chrono * chrono);
 void TR_chronoStop(TR_Chrono * chrono);
 double TR_chronoElapsedMs(const TR_Chrono * chrono);
+
+TR_Driver TR_udpDriver(void);
 
 #endif
