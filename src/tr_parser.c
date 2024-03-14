@@ -133,6 +133,13 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
         if (errno == ERANGE || *endptr || maxTtl > TR_MAX_TTL_MAX)
           TR_invalidOptionArg("--max-hops", argv[i] + 11, i);
         options.maxTtl = maxTtl;
+      } else if (!strncmp(argv[i] + 2, "queries", 7)) {
+        if (argv[i][9] != '=' || !argv[i][10])
+          TR_missingOptionArg("--queries", i, "--queries=nqueries");
+        const unsigned long nQueries = strtoul(argv[i] + 10, &endptr, 0);
+        if (errno == ERANGE || *endptr || nQueries > TR_NQUERIES_MAX)
+          TR_invalidOptionArg("--queries", argv[i] + 10, i);
+        options.nQueries = nQueries;
       } else if (!strncmp(argv[i] + 2, "wait", 4)) {
         if (argv[i][6] != '=')
           TR_missingOptionArg("--wait", i, "--wait=wait_time");
@@ -153,7 +160,16 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
         options.wait.near = strtod(endptr + 1, &endptr);
         if (*endptr)
           TR_invalidOptionArg("--wait", argv[i] + 7, i);
-      } else
+      } else if (!strncmp(argv[i] + 2, "port", 4)) {
+        if (argv[i][6] != '=' || !argv[i][7])
+          TR_missingOptionArg("--port", i, "--port=port");
+        const unsigned long port = strtoul(argv[i] + 7, &endptr, 0);
+        if (errno == ERANGE || *endptr || port > UINT16_MAX)
+          TR_invalidOptionArg("--port", argv[i] + 7, i);
+        options.port = port;
+      } else if (!strncmp(argv[i] + 2, "icmp", 4))
+        options.method = TR_ICMP;
+      else
         // unknown option
         TR_badOption(argv[i], i);
 
@@ -214,6 +230,20 @@ TR_Options TR_parseArgs(int argc, const char * const * argv) {
             if (errno == ERANGE || *endptr)
               TR_invalidOptionArg("-w", argv[i], i);
             break;
+
+          case 'p':
+            if (i + 1 == argc)
+              TR_missingOptionArg("-p", i, "-p port");
+            const unsigned long port = strtoul(argv[++i], &endptr, 0);
+            if (!*argv[i] || errno == ERANGE || *endptr || port > UINT16_MAX)
+              TR_invalidOptionArg("-p", argv[i], i);
+            options.port = port;
+            break;
+
+          case 'I':
+            options.method = TR_ICMP;
+            break;
+
           default:
             // unknown option
 

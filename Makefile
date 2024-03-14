@@ -10,7 +10,7 @@ DEP_EXT=d
 
 CC=gcc
 CSTD=gnu17
-CFLAGS=-Wall -Wextra -Werror -std=$(CSTD) -MMD $(addprefix -I,$(INC_DIRS))
+CFLAGS=-Wall -Wextra -Werror -std=$(CSTD) -MMD $(addprefix -I,$(INC_DIRS)) -g3
 
 SRC=$(wildcard $(SRC_DIR)/*.$(SRC_EXT))
 OBJ=$(SRC:$(SRC_DIR)/%.$(SRC_EXT)=$(BUILD_DIR)/%.$(OBJ_EXT))

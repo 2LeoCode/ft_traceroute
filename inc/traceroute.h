@@ -28,13 +28,11 @@
 #define TR_WAIT_NEAR_DEFAULT 10.
 #define TR_NQUERIES_MAX 0x40
 #define TR_PACKET_LEN_MAX 0xffff
-
+#define TR_UDP_PORT_DEFAULT 33434
 #define TR_PACKET_LEN_DEFAULT 0x40
 #define TR_FIRST_TTL_DEFAULT 1
 #define TR_MAX_TTL_DEFAULT 30
 #define TR_NQUERIES_DEFAULT 3
-
-#define TR_UDP_UNLIKELY_PORT 33434
 
 typedef struct s_tr_socket TR_Socket;
 typedef struct s_tr_socket_set TR_SocketSet;
@@ -47,7 +45,12 @@ typedef enum e_tr_global_options TR_GlobalOptions;
 typedef enum e_tr_method TR_Method;
 
 typedef TR_Packet * TR_BuildPacketFn(size_t size);
-typedef int TR_SendFn(const TR_Socket * socket, TR_Packet * packet);
+typedef int TR_SendFn(
+    const TR_Driver * driver,
+    TR_Socket * socket,
+    TR_Packet * packet,
+    uint8_t sequence
+);
 typedef int TR_RecvFn(TR_Socket * socket, bool * dstReached);
 
 enum e_tr_chrono_status {
@@ -61,6 +64,7 @@ enum e_tr_global_options {
 
 enum e_tr_method {
   TR_UDP = 0,
+  TR_ICMP = 1,
 };
 
 struct s_tr_chrono {
@@ -86,6 +90,7 @@ struct s_tr_socket_set {
 struct s_tr_options {
   TR_GlobalOptions global_opts;
   TR_Method method;
+  uint16_t port;
   uint8_t packetLen;
   uint8_t firstTtl;
   uint8_t maxTtl;
@@ -101,6 +106,7 @@ struct s_tr_driver {
   int domain;
   int type;
   int protocol;
+  uint16_t port;
   TR_BuildPacketFn * buildPacket;
   TR_SendFn * send;
   TR_RecvFn * recv;
@@ -131,6 +137,7 @@ void TR_chronoStart(TR_Chrono * chrono);
 void TR_chronoStop(TR_Chrono * chrono);
 double TR_chronoElapsedMs(const TR_Chrono * chrono);
 
-TR_Driver TR_udpDriver(void);
+TR_Driver TR_udpDriver(uint16_t port);
+TR_Driver TR_icmpDriver(void);
 
 #endif

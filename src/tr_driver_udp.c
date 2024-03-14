@@ -5,7 +5,6 @@ static TR_Packet * TR_udpBuildPacket(size_t size) {
   TR_Packet * packet = malloc(sizeof(TR_Packet) + packetSize);
   if (!packet)
     return NULL;
-
   packet->size = packetSize;
 
   for (size_t i = 0; i < packet->size; ++i)
@@ -13,7 +12,13 @@ static TR_Packet * TR_udpBuildPacket(size_t size) {
   return packet;
 }
 
-static int TR_udpSend(const TR_Socket * socket, TR_Packet * packet) {
+static int TR_udpSend(
+    const TR_Driver * driver,
+    TR_Socket * socket,
+    TR_Packet * packet,
+    uint8_t sequence
+) {
+  socket->dstAddress.sin_port = htons(driver->port + sequence);
   return sendto(
       socket->fileno,
       packet->data,
@@ -88,11 +93,12 @@ static int TR_udpRecv(TR_Socket * socket, bool * dstReached) {
   return TR_SUCCESS;
 }
 
-TR_Driver TR_udpDriver(void) {
+TR_Driver TR_udpDriver(uint16_t port) {
   return (TR_Driver){
       .domain = AF_INET,
       .type = SOCK_DGRAM,
       .protocol = IPPROTO_UDP,
+      .port = port ? port : TR_UDP_PORT_DEFAULT,
       .buildPacket = TR_udpBuildPacket,
       .send = TR_udpSend,
       .recv = TR_udpRecv,

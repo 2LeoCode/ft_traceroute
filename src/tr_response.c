@@ -41,6 +41,7 @@ static void TR_processTimeouts(
 int TR_processResponses(
     TR_SocketSet * tr, const TR_Options * options, const TR_Driver * driver
 ) {
+  printf("%d\n", tr->nfds);
   while (tr->nfds != 0) {
     fd_set rfd = tr->fds;
 

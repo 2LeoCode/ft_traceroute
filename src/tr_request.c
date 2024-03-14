@@ -9,8 +9,8 @@ int TR_processRequests(
 
   for (uint8_t i = 0; i <= tr->lastHop; ++i) {
     for (uint8_t j = 0; j < options->nQueries; ++j) {
-      tr->sockets[i].dstAddress.sin_port = htons(TR_UDP_UNLIKELY_PORT + j);
-      if (driver->send(tr->sockets + i, pkt) == -1)
+      tr->sockets[i].dstAddress.sin_port = htons(driver->port + j);
+      if (driver->send(driver, tr->sockets + i, pkt, j) == -1)
         goto Error;
       TR_chronoStart(tr->sockets[i].chronos + j);
     }

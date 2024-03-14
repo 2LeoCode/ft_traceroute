@@ -9,9 +9,12 @@ int main(int argc, const char * const * argv) {
   TR_Driver driver;
 
   switch (options.method) {
+    case TR_ICMP:
+      driver = TR_icmpDriver();
+      break;
     case TR_UDP:
     default:
-      driver = TR_udpDriver();
+      driver = TR_udpDriver(options.port);
       break;
   }
 
