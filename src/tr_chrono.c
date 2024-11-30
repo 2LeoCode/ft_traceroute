@@ -1,12 +1,12 @@
 #include <assert.h>
 #include <traceroute.h>
 
-void TR_chronoStart(TR_Chrono * chrono) {
+void TR_chronoStart(TR_Chrono *chrono) {
   clock_gettime(CLOCK_MONOTONIC, &chrono->time);
   chrono->status = 0;
 }
 
-void TR_chronoStop(TR_Chrono * chrono) {
+void TR_chronoStop(TR_Chrono *chrono) {
   if (chrono->status == TR_CHRONO_SUCCESS) {
     return;
   }
@@ -21,7 +21,7 @@ void TR_chronoStop(TR_Chrono * chrono) {
   chrono->status = TR_CHRONO_SUCCESS;
 }
 
-double TR_chronoElapsedMs(const TR_Chrono * chrono) {
+double TR_chronoElapsedMs(const TR_Chrono *chrono) {
   if (chrono->status == TR_CHRONO_SUCCESS) {
     return chrono->time.tv_sec * 1000. + chrono->time.tv_nsec / 1000000.;
   }

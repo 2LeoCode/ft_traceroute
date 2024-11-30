@@ -1,9 +1,8 @@
 #include <traceroute.h>
 
-int TR_processRequests(
-    TR_SocketSet * tr, const TR_Options * options, const TR_Driver * driver
-) {
-  TR_Packet * pkt = driver->buildPacket(options->packetLen);
+int TR_processRequests(TR_SocketSet *tr, const TR_Options *options,
+                       const TR_Driver *driver) {
+  TR_Packet *pkt = driver->buildPacket(options->packetLen);
   if (!pkt)
     return TR_FAILURE;
 

@@ -1,6 +1,6 @@
 #include <traceroute.h>
 
-int TR_run(const TR_Options * options, const TR_Driver * driver) {
+int TR_run(const TR_Options *options, const TR_Driver *driver) {
   TR_SocketSet tr = {
       .nfds = options->maxTtl - options->firstTtl + 1,
   };

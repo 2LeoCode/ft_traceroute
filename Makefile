@@ -21,6 +21,9 @@ all: $(BUILD_DIR) $(NAME)
 
 -include $(DEP)
 
+compile-flags:
+	@echo $(CFLAGS) | tr ' ' '\n'
+
 $(BUILD_DIR):
 	mkdir -p $@
 

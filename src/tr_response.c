@@ -1,8 +1,7 @@
 #include <traceroute.h>
 
-static void TR_processTimeouts(
-    TR_SocketSet * tr, const TR_Options * options, uint8_t hopIdx
-) {
+static void TR_processTimeouts(TR_SocketSet *tr, const TR_Options *options,
+                               uint8_t hopIdx) {
   for (uint8_t j = 0; j < options->nQueries; ++j) {
     if (!tr->sockets[hopIdx].chronos[j].status) {
       double timeoutMs = options->wait.max * 1000;
@@ -38,9 +37,8 @@ static void TR_processTimeouts(
   }
 }
 
-int TR_processResponses(
-    TR_SocketSet * tr, const TR_Options * options, const TR_Driver * driver
-) {
+int TR_processResponses(TR_SocketSet *tr, const TR_Options *options,
+                        const TR_Driver *driver) {
   while (tr->nfds != 0) {
     fd_set rfd = tr->fds;
 
