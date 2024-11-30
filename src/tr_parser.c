@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <string.h>
 #include <traceroute.h>
 
 static void TR_badOption(const char *option, int idx) {
@@ -58,6 +60,7 @@ TR_Options TR_parseArgs(int argc, const char *const *argv) {
                         .firstTtl = TR_FIRST_TTL_DEFAULT,
                         .maxTtl = TR_MAX_TTL_DEFAULT,
                         .nQueries = TR_NQUERIES_DEFAULT,
+                        .port = TR_UDP_PORT_DEFAULT,
                         .wait = {
                             .max = TR_WAIT_MAX_DEFAULT,
                             .here = TR_WAIT_HERE_DEFAULT,
@@ -81,11 +84,12 @@ TR_Options TR_parseArgs(int argc, const char *const *argv) {
         break;
       case 1:
         // packetlen
-
-        const unsigned long packetLen = strtoul(argv[i], &endptr, 0);
-        if (errno == ERANGE || *endptr || packetLen > TR_PACKET_LEN_MAX)
-          TR_invalidArg("packetlen", argv[i], arg_cnt, i);
-        options.packetLen = packetLen;
+        {
+          const unsigned long packetLen = strtoul(argv[i], &endptr, 0);
+          if (errno == ERANGE || *endptr || packetLen > TR_PACKET_LEN_MAX)
+            TR_invalidArg("packetlen", argv[i], arg_cnt, i);
+          options.packetLen = packetLen;
+        }
         break;
       default:
         // extra arg
@@ -118,7 +122,7 @@ TR_Options TR_parseArgs(int argc, const char *const *argv) {
           TR_invalidOptionArg("--max-hops", argv[i] + 11, i);
         options.maxTtl = maxTtl;
       } else if (!strncmp(argv[i] + 2, "wait", 4)) {
-        if (argv[i][6] != '=')
+        if (argv[i][6] != '=' || !argv[i][7])
           TR_missingOptionArg("--wait", i, "--wait=wait_time");
         options.wait.max = strtod(argv[i] + 7, &endptr);
         if (!argv[i][6] || errno == ERANGE)
@@ -134,9 +138,18 @@ TR_Options TR_parseArgs(int argc, const char *const *argv) {
           TR_invalidOptionArg("--wait", argv[i] + 7, i);
         if (!*endptr)
           continue;
+        if (*endptr != ',' || !endptr[1])
+          TR_invalidOptionArg("-w", argv[i], i);
         options.wait.near = strtod(endptr + 1, &endptr);
         if (*endptr)
           TR_invalidOptionArg("--wait", argv[i] + 7, i);
+      } else if (!strncmp(argv[i] + 2, "port", 4)) {
+        if (argv[i][6] != '=' || !argv[i][7])
+          TR_missingOptionArg("--port", i, "--port=dst_port");
+        const unsigned long port = strtoul(argv[i] + 7, &endptr, 0);
+        if (errno == ERANGE || *endptr || port > UINT16_MAX)
+          TR_invalidOptionArg("--port", argv[i] + 7, i);
+        options.port = port;
       } else
         // unknown option
         TR_badOption(argv[i], i);
@@ -194,10 +207,22 @@ TR_Options TR_parseArgs(int argc, const char *const *argv) {
             TR_invalidOptionArg("-w", argv[i], i);
           if (!*endptr)
             continue;
+          if (*endptr != ',' || !endptr[1])
+            TR_invalidOptionArg("-w", argv[i], i);
           options.wait.near = strtod(endptr + 1, &endptr);
           if (errno == ERANGE || *endptr)
             TR_invalidOptionArg("-w", argv[i], i);
           break;
+
+        case 'p':
+          if (i + 1 == argc)
+            TR_missingOptionArg("-p", i, "-p dst_port");
+          const unsigned long port = strtoul(argv[++i], &endptr, 0);
+          if (errno == ERANGE || *endptr || port > UINT16_MAX)
+            TR_invalidOptionArg("--port", argv[i], i);
+          options.port = port;
+          break;
+
         default:
           // unknown option
 

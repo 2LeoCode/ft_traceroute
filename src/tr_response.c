@@ -23,12 +23,12 @@ static void TR_processTimeouts(TR_SocketSet *tr, const TR_Options *options,
             if (tr->sockets[k].chronos[l].status == TR_CHRONO_SUCCESS) {
               timeoutMs = TR_chronoElapsedMs(tr->sockets[k].chronos + l) *
                           options->wait.near;
-              goto found;
+              goto Found;
             }
           }
         }
       }
-    found:
+    Found:
       if (TR_chronoElapsedMs(tr->sockets[hopIdx].chronos + j) > timeoutMs) {
         tr->sockets[hopIdx].chronos[j].status = TR_CHRONO_TIMEOUT;
         ++tr->sockets[hopIdx].packetsReceivedOrLost;

@@ -34,7 +34,7 @@
 #define TR_MAX_TTL_DEFAULT 30
 #define TR_NQUERIES_DEFAULT 3
 
-#define TR_UDP_UNLIKELY_PORT 33434
+#define TR_UDP_PORT_DEFAULT 33434
 
 typedef struct s_tr_socket TR_Socket;
 typedef struct s_tr_socket_set TR_SocketSet;
@@ -92,6 +92,7 @@ struct s_tr_options {
   uint8_t nQueries;
   const char *dstHost;
   in_addr_t dstAddress;
+  uint16_t port;
   struct {
     double max, here, near;
   } wait;
